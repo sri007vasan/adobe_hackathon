@@ -1,70 +1,130 @@
-PDF Title and Heading Detection System
-Overview
-This project focuses on detecting the title and headings (up to level H3) in PDF documents. The model is trained using the DocBank dataset, and predictions are made using a trained XGBoost classifier. Additionally, PyMuPDF (fitz) is used to detect the document title based on font properties and visual layout heuristics.
+# PDF Title and Heading Detection System
 
-Dataset
-We used the DocBank dataset, which contains detailed layout annotations for PDF documents including structural information like section headings, paragraphs, etc. The dataset provides bounding box positions, text, and labels, which makes it suitable for training models to detect headers and structural components of a document.
+## Overview
 
-Preprocessing
-Parsing annotations: The dataset was parsed to extract relevant features such as text content, font size, and position.
+This project focuses on detecting the **title** and **headings (up to level H3)** in PDF documents. It uses a hybrid approach combining:
 
-Feature extraction:
+- XGBoost-based heading detection (H1, H2, H3)
+- Rule-based title detection using PyMuPDF
 
-Font size
+The goal is to extract structured, hierarchical heading information in JSON format, useful for document indexing, content analysis, or automated document summarization.
 
-Font flags (bold, italic etc.)
+---
+## Reference paper:
+A Supervised Learning Approach For Heading Detection **doi:** https://doi.org/10.48550/arXiv.1809.01477
+---
+It was this paper that made us to choose either decision tree or XGboost for heading prediciton.This paper includes creatiion of own dataset by converting random pdf pages into latex format and then using them as lables to train the model.This comparative analysis study that was made in the paper reveals that decisontree or XG Boost performs well and we have finally opted the later model.
 
-Word count in a line
+## Dataset
 
-Text case analysis (uppercase, lowercase, title case)
+We used the **DocBank** dataset, which contains detailed layout annotations for scientific articles in PDF format. Each line is labeled with structural tags like section headings, paragraphs, figures, etc.
+**Link:** https://www.kaggle.com/datasets/shashankpy/docbank-layout-segmentation-dataset
+```
+data/
+├── docbank_training_data_gp/       # Training data from DocBank
+│   ├── annotations/                # JSON annotation files for each PDF
+│   └── images/                     # Corresponding page images
+├── docbank_validation_data/        # Validation data from DocBank
+│   ├── annotations/                # JSON annotation files for validation
+│   └── images/                     # Page images for validation
+└── docbank_testing_data_gp/        # Testing data from DocBank
+    ├── annotations/                # Annotation files used for testing
+    └── images/                     # Images for testing PDFs
+```
+DocBank provides:
 
-POS tagging (verbs, nouns, cardinals using spaCy)
+- Bounding boxes
+- Font and positional features
+- Text annotations with labels
 
-Labeling: Headings in the dataset were labeled as 1 and normal text as 0.
+This makes it ideal for training supervised models for layout-based classification.
 
-The dataset was split into training and validation sets before training.
+---
 
-Model: XGBoost
-An XGBoost classifier was trained for heading detection using the extracted features. It outperformed simple Decision Trees due to its ability to capture non-linear relationships and apply boosting to improve accuracy.
+## Preprocessing
 
-Model Training
-Input: Feature vectors from each line of text
+To prepare the data:
 
-Target: Binary label indicating whether the line is a heading or not
+- **Annotation Parsing**: Extracted text, font size, and coordinates from JSON annotations.
+- **Feature Engineering**:
+  - Font size
+  - Font flags (e.g., bold, italic)
+  - Number of words in a line
+  - Text case (uppercase, lowercase, title case)
+  - Part-of-speech tagging using spaCy (`en_core_web_sm`): nouns, verbs, cardinals
+- **Labeling**:
+  - Headings labeled as `1`
+  - Non-headings labeled as `0`
+- **Train-Test Split**: Dataset was split into training and validation sets.
 
-Evaluation:
+---
 
-Accuracy: ~86%
+## Model: XGBoost
 
-Precision: Higher for non-headings, slightly lower for headings due to class imbalance
+A supervised classification model using **XGBoost** was trained to identify headings based on the extracted features.
 
-Confusion matrix and classification report were used for evaluation
+### Training Setup
 
-Title Detection using PyMuPDF
-For document title detection, a rule-based method using PyMuPDF (fitz) was used. The title is assumed to be among the first lines in the first page with the largest font size and bold style.
+- **Input**: Feature vectors from each line
+- **Output**: Binary label (heading or not)
 
-Steps:
-Open the PDF with PyMuPDF.
+### Performance
 
-Extract blocks of text from the first page.
+- **Accuracy**: ~86%
+- **Precision/Recall**: Balanced, with slightly lower recall for headings due to class imbalance
+- Evaluated using a confusion matrix and classification report
+we have also tried **DECISION TREE** which also gave similar accuracy but lagged at sme complex cases 
+---
+###  ⚠️ ⚠️IMPORTANT NOTE!!! ⚠️ ⚠️ :
+**THE ACCURACY CAN BE INCREASED IF A PROPER DATASET HAD EXISTED...SINCE IT IS VERY COMMON TO KNOW THAT IN A PAGE THE HEADINGS WILL BE LESSER THAN PARAGRAPHS IT WAS VERY HARD TO TRAIN TO MAKE MODEL TO CLASSIFY HEADING....**
+**IN FACT OUR MODEL'S ACCURACY FOR NON-HEADING IS 96% THIS IS BECAUSE THERE IS MORE DATA TO TRAIN FOR NON-HEADING**
+**SO WE PROMISE THAT WITH SOME UNBIASED DATASET WE CAN ACHIEVE 95%+ ACCURACY**
+## Title Detection using PyMuPDF
 
-Identify lines with font size above a certain threshold and bold styling.
+For identifying the document title, a heuristic approach using **PyMuPDF (fitz)** was implemented.
 
-Select the top 1 or 2 lines with the largest font size as the title.
+### Logic
 
-Combined Output
-The final script combines both approaches:
+1. Load the first page
+2. Extract all text spans and their attributes
+3. Identify lines with:
+   - Font size above a threshold (e.g., ≥13)
+   - Bold font
+   - Non-generic content
+4. Select top 1–2 lines as the document title
 
-detect_title_with_pymupdf(pdf_path) extracts the title.
+If no confident title is found, the top heading from the XGBoost model is used as a fallback.
 
-predict_headings(pdf_path, model) uses the trained model to detect all headings (H1–H3).
+---
 
-If the title predicted by PyMuPDF is missing or too generic, the top heading is used as a fallback.
+## Combined Output
+Finally the output given by the model is attached in the heading part of the JSON output file and the output given by the Pymudf is attached at the title part of the JSON output file the combined output file is generated
+The final output includes:
 
-The output is written into a structured JSON file with fields:
+- `title`: Document title
+- `headings`: A list of detected headings up to level H3 with fields:
+  - `text`
+  - `level` (H1, H2, H3)
+  - `page`
 
-"title": Detected title
+Example JSON structure:
 
-"headings": List of heading objects with "level", "text", and "page".
+```json
+{
+  "title": "Application form for grant of LTC advance",
+  "headings": [
+    {
+      "level": "H2",
+      "text": "Application form for grant of LTC advance",
+      "page": 1
+    },
+    {
+      "level": "H3",
+      "text": "Name of the Government Servant",
+      "page": 1
+    }
+  ]
+}
+```
 
 
