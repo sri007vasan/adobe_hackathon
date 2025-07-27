@@ -51,7 +51,7 @@ To prepare the data:
   - Font flags (e.g., bold, italic)
   - Number of words in a line
   - Text case (uppercase, lowercase, title case)
-  - Part-of-speech tagging using spaCy (`en_core_web_sm`): nouns, verbs, cardinals
+  - Part-of-speech tagging using spaCy: nouns, verbs, cardinals
 - **Labeling**:
   - Headings labeled as `1`
   - Non-headings labeled as `0`
