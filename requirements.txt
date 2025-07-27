@@ -1,0 +1,9 @@
+pytesseract
+nltk
+pandas
+joblib
+pdfplumber
+opencv-python-headless
+Pillow
+PyMuPDF
+xgboost

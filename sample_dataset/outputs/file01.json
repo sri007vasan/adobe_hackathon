@@ -1,0 +1,45 @@
+{
+  "title": "Application form for grant of LTC advance",
+  "headings": [
+    {
+      "level": "H3",
+      "text": "Name of the Government Servant",
+      "page": 1
+    },
+    {
+      "level": "H3",
+      "text": "Designation",
+      "page": 1
+    },
+    {
+      "level": "H3",
+      "text": "Service",
+      "page": 1
+    },
+    {
+      "level": "H3",
+      "text": "PAY + SI + NPA",
+      "page": 1
+    },
+    {
+      "level": "H3",
+      "text": "Whether permanent or temporary",
+      "page": 1
+    },
+    {
+      "level": "H3",
+      "text": "Single rail fare/bus fare from the",
+      "page": 1
+    },
+    {
+      "level": "H3",
+      "text": "S.No Name Age Relationship",
+      "page": 1
+    },
+    {
+      "level": "H3",
+      "text": "Date",
+      "page": 1
+    }
+  ]
+}
