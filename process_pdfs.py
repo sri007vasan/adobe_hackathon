@@ -1,4 +1,4 @@
-# process_pdfs.py
+
 import os
 import json
 import pandas as pd
@@ -7,17 +7,12 @@ import joblib
 import pdfplumber
 import numpy as np
 from PIL import Image
-import fitz # PyMuPDF
+import fitz
 
-# --- REMOVED NLTK Downloads from here ---
-# They are now handled in the Dockerfile build process.
-# import nltk # You still need to import nltk at the top of the file
 
-# Ensure nltk is imported
 import nltk
 
-# --- Functions from your Colab notebook (no changes needed to functions below this point) ---
-# ... (all your functions: extract_features_from_text_lines, detect_title_with_pymupdf, predict_headings) ...
+
 
 def extract_features_from_text_lines(text_lines, mode_font_size):
     rows = []
@@ -72,9 +67,9 @@ def detect_title_with_pymupdf(pdf_path):
                         "page": page_num + 1
                     })
 
-    # Safe title extraction
+
     if len(heading_candidates) >= 2:
-        # Prioritize larger font size for multi-part titles or just take the first two
+   
         title_parts = sorted(heading_candidates, key=lambda x: x['font_size'], reverse=True)[:2]
         title = " ".join([p["text"] for p in sorted(title_parts, key=lambda x: x['page'])])
     elif len(heading_candidates) == 1:
@@ -92,7 +87,7 @@ def predict_headings(pdf_path, model):
         for page_number, page in enumerate(pdf.pages):
             words = page.extract_words(extra_attrs=["size", "top"])
 
-            # Group words by lines using y-position
+       
             lines = {}
             for w in words:
                 text = w['text']
@@ -109,34 +104,33 @@ def predict_headings(pdf_path, model):
                 font_size = max([w[2] for w in sorted_words])
                 text_lines.append((line_text, font_size, page_number + 1))
 
-    # Get mode font size
+  
     font_sizes = [fs for _, fs, _ in text_lines]
     if not font_sizes:
         return []
     mode_font_size = pd.Series(font_sizes).mode()[0]
 
-    # Group by page
+  
     lines_by_page = {}
     for txt, sz, pg in text_lines:
         if pg not in lines_by_page:
             lines_by_page[pg] = []
         lines_by_page[pg].append((txt, sz))
 
-    # Predict headings
+ 
     predictions = []
     for pg, lines in lines_by_page.items():
         df_lines = extract_features_from_text_lines(lines, mode_font_size)
         if df_lines.empty:
             continue
         df_lines['prediction'] = model.predict(df_lines[['font_flag', 'num_words', 'text_case', 'verbs', 'nouns', 'cardinals']])
-        df_lines['font_size'] = [line[1] for line in lines]  # Reuse font sizes
+        df_lines['font_size'] = [line[1] for line in lines] 
 
         for idx, row in df_lines[df_lines['prediction'] == 1].iterrows():
             font_size = row['font_size']
-            # Adjusted heading level logic
-            if font_size >= mode_font_size * 1.2: # Example: 20% larger than mode font
+            if font_size >= mode_font_size * 1.2: 
                 level = "H1"
-            elif font_size >= mode_font_size * 1.1: # Example: 10% larger than mode font
+            elif font_size >= mode_font_size * 1.1: 
                 level = "H2"
             else:
                 level = "H3"
@@ -148,17 +142,17 @@ def predict_headings(pdf_path, model):
 
     return predictions
 
-# --- Main execution block for Docker ---
-if __name__ == "__main__":
-    # Define paths for Docker environment
-    INPUT_PDF_DIR = "/app/input"
-    OUTPUT_JSON_DIR = "/app/output" # Output will be a JSON file for each PDF
-    MODEL_PATH = "heading_model.joblib" # Model is copied into /app
 
-    # Ensure output directory exists
+if __name__ == "__main__":
+  
+    INPUT_PDF_DIR = "/app/input"
+    OUTPUT_JSON_DIR = "/app/output" 
+    MODEL_PATH = "heading_model.joblib" 
+
+
     os.makedirs(OUTPUT_JSON_DIR, exist_ok=True)
 
-    # --- Load the pre-trained model ---
+   
     print(f"Loading pre-trained model from {MODEL_PATH}...")
     try:
         model = joblib.load(MODEL_PATH)
@@ -170,7 +164,7 @@ if __name__ == "__main__":
         print(f"Error loading model: {e}")
         exit(1)
 
-    # --- Process PDFs from the input directory ---
+  
     print(f"\nProcessing PDFs from: {INPUT_PDF_DIR}")
     pdf_files_found = False
     for filename in os.listdir(INPUT_PDF_DIR):
@@ -182,26 +176,25 @@ if __name__ == "__main__":
 
             print(f"Processing {pdf_path}...")
             try:
-                # Detect title
+           
                 title = detect_title_with_pymupdf(pdf_path)
 
-                # Predict headings
+            
                 headings = predict_headings(pdf_path, model)
 
-                # Use first heading as title if original title is "Untitled Document" and headings exist
+          
                 if title == "Untitled Document" and headings:
                     title = headings[0]["text"]
-                    headings = headings[1:]  # remove the first heading since it's now used as title
+                    headings = headings[1:]  
 
                 output_data = {
                     "title": title,
                     "headings": headings
                 }
 
-                # Save to output JSON
                 with open(output_filepath, "w", encoding="utf-8") as f:
                     json.dump(output_data, f, indent=2, ensure_ascii=False)
-                print(f"✅ Output for {filename} written to {output_filepath}")
+                print(f"Output for {filename} written to {output_filepath}")
 
             except Exception as e:
                 print(f"Error processing {filename}: {e}")
