@@ -128,3 +128,15 @@ Example JSON structure:
 ```
 
 
+## Docker Setup
+```
+# Build Docker image
+docker build --platform linux/amd64 -t heading-and-title-extraction:round1a .
+
+# Run with your input/output directories
+docker run --rm \
+  -v $(pwd)/input:/app/input \
+  -v $(pwd)/output:/app/output \
+  --network none \
+  heading-and-title-extraction:round1a
+  ```
